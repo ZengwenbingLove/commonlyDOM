@@ -8,11 +8,18 @@
   'use strict';
 
 	var prev$ = win.$;
+
 	var nativeSlice = Array.prototype.slice;
 	var nativeToString = Object.prototype.toString;
   var nativeKeys = Object.keys;
-	var matchTagExp = /<([a-z]+)[^>]*?>(.*?)<\/\1>/i;
+
+  var matchTagExp = /<([a-z]+)[^>]*?>(.*?)<\/\1>/i;
 	var matchSelectorExp = /^([.#]?)([\w-]+)$/i;
+
+  var specialCSSProperties = [
+    'line-height', 'zoom', 'z-index',
+    'font-weight', 'opacity'
+  ];
 
 	var classTypeMap = {};
 	['String', 'Number', 'Boolean', 'Function', 'Array', 'Object', 'Date', 'RegExp', 'Error'].forEach(function (type) {
@@ -62,7 +69,13 @@
 
   var blankSplit = function (str) {
     return str.trim().split(/\s+/);
-  }
+  };
+
+  var camelCase = function (str) {
+    return str.replace(/[A-Z]/g, function (match) {
+      return '-' + match;
+    });
+  };
 
   var filterIndexRange = function (index, length) {
     return index < 0
@@ -120,11 +133,34 @@
   /**
     CSS Api
   **/
-  var getCSS = function () {};
+  var implicitCSSAccessor = function (el) {
+    return document
+      .defaultView
+      .getComputedStyle(el, null)
+      .getPropertyValue;
+  };
 
-  var setCSS = function () {};
+  var getCSS = function (el, cssName) {
+    var formatCSSName = camelCase(cssName);
 
-  var formatCSS = function () {};
+    return el.style[formatCSSName] || implicitCSSAccessor(el)(formatCSSName);
+  };
+
+  var setCSS = function (el, cssName, cssValue) {
+    if (getType(cssName) === 'object') {
+      cssValue = JSON.stringify(cssName).replace(/[{}'"]/g, '').replace(/,/, ';');
+      el.style.cssText += cssValue;
+    } else {
+      cssName = camelCase(cssName);
+      var isSpecialCSSProperty = specialCSSProperties.find(cssName);
+
+      if (!isSpecialCSSProperty && /^\d+$/.test(cssValue)) {
+        cssValue = cssValue + 'px';
+      }
+
+      el.style[cssName] = cssValue;
+    }
+  };
 
 
 	/**
@@ -275,8 +311,10 @@
         each(attrName, function (name, value) {
           self.attr(name, value);
         });
+
+        return this;
       } else {
-        self.each(function (index, el) {
+        return self.each(function (index, el) {
           if (getType(attrValue) === 'function') {
             attrValue = attrValue(el.getAttribute(attrName));
           }
@@ -286,6 +324,16 @@
       }
     }
   };
+
+  InitSelector.prototype.css = function (cssName, cssValue) {
+    if (cssValue == null && getType(cssName) !== 'object') {
+      return getCSS(this.get(0), cssName);
+    } else {
+      return this.each(function (index, el) {
+        setCSS(el, cssName, cssValue);
+      });
+    }
+  }
 
 	function $ (selector, context) {
     return new InitSelector(selector, context);

@@ -52,8 +52,9 @@
 
     for (var i = 0, length = collections.length; i < length; i++) {
       var item = isArray ? collections[i] : entry[collections[i]];
+      var key = isArray ? i : collections[i];
 
-      if (iteratee.call(item, index, item, entry) === false) {
+      if (iteratee.call(item, key, item, entry) === false) {
         return;
       }
     }
@@ -69,6 +70,9 @@
      : length - 1;
   };
 
+  /**
+    事件 Api
+  **/
   var addEventListener = function (el, eventName, addHandler) {
     if (getType(eventName) === 'string') {
       eventName = blankSplit(eventName);
@@ -112,6 +116,16 @@
   var getEvents = function (el) {
     return el.eventListeners;
   };
+
+  /**
+    CSS Api
+  **/
+  var getCSS = function () {};
+
+  var setCSS = function () {};
+
+  var formatCSS = function () {};
+
 
 	/**
    根据html创建element
@@ -245,6 +259,32 @@
     });
 
     return this;
+  };
+
+  InitSelector.prototype.attr = function (attrName, attrValue) {
+    var self = this;
+
+    if (!attrValue && getType(attrName) !== 'object') {
+      // get
+      return self.get(0)[attrName] == null
+       ? self.get(0).getAttribute(attrName)
+       : self.get(0)[attrName];
+    } else {
+      // set
+      if (getType(attrName) === 'object') {
+        each(attrName, function (name, value) {
+          self.attr(name, value);
+        });
+      } else {
+        self.each(function (index, el) {
+          if (getType(attrValue) === 'function') {
+            attrValue = attrValue(el.getAttribute(attrName));
+          }
+
+          el.setAttribute(attrName, attrValue);
+        });
+      }
+    }
   };
 
 	function $ (selector, context) {

@@ -21,11 +21,19 @@
     'font-weight', 'opacity'
   ];
 
+  var childrenParentTagNameMap = {
+    'li': 'ul',
+    'undefined': 'div'
+  };
+
   var classTypeMap = {};
   ['String', 'Number', 'Boolean', 'Function', 'Array', 'Object', 'Date', 'RegExp', 'Error'].forEach(function (type) {
     classTypeMap['[object '+ type +']'] = type.toLowerCase();
   });
 
+  /**
+   全局/公共方法
+  **/
   var getType = function (entry) {
     if (entry == null) {
       return String(entry);
@@ -36,11 +44,6 @@
     } else {
       return classTypeMap[naviveToString.call(entry)];
     }
-  };
-
-  var childrenParentTagNameMap = {
-    'li': 'ul',
-    'undefined': 'div'
   };
 
   var toArray = function (likeArray) {
@@ -72,9 +75,19 @@
   };
 
   var camelCase = function (str) {
-    return str.replace(/[A-Z]/g, function (match) {
-      return '-' + match;
-    });
+    return str.replace(/([A-Z])/g, '-$1').toLowerCase();
+  };
+
+  var getRealValue = function (value) {
+    return
+      value === 'true'
+      || value === 'false'
+        ? false
+        : +value + '' === value
+          ? +value
+          : value === 'null'
+            ? null
+            : getType(value) === 'object' || getType(value) === 'array' && JSON.stringify(value);
   };
 
   var filterIndexRange = function (index, length) {
@@ -162,10 +175,39 @@
     }
   };
 
-
   /**
-   根据html创建element
+    Dom Class Api
   **/
+  var classApi = function (context, method, className, isToggle) {
+    if (!className) {
+      if (method === 'add') {
+        return context;
+      }
+
+      return context.removeAttr('class');
+    }
+
+    return context.each(function () {
+      if (getType(className) === 'function') {
+        className = className(this.className);
+
+        if (!className) {
+          return false;
+        }
+      }
+
+      var el = this;
+      className = blankSplit(className);
+
+      each(className, function (index, name) {
+        isToggle == null
+          ? this.classList[method](name);
+          : this.classList.toggle(name, isToggle);
+      });
+    });
+  };
+
+  // 根据html创建element
   var createElement = function (html) {
     var tagName, children;
 
@@ -189,9 +231,7 @@
     return tmpParent.lastElementChild;
   };
 
-  /**
-   根据selector查找element
-  **/
+  // 根据selector查找element
   var findElement = function (selector, context) {
     context || (context = document);
     var dom;
@@ -219,7 +259,9 @@
     return toArray(dom);
   };
 
-
+  /**
+   selector constructor
+  **/
   function InitSelector (selector, context) {
     var type = getType(selector);
 
@@ -300,7 +342,7 @@
   InitSelector.prototype.attr = function (attrName, attrValue) {
     var self = this;
 
-    if (!attrValue && getType(attrName) !== 'object') {
+    if (attrValue == null && getType(attrName) !== 'object') {
       // get
       return self.get(0)[attrName] == null
        ? self.get(0).getAttribute(attrName)
@@ -325,6 +367,16 @@
     }
   };
 
+  InitSelector.prototype.removeAttr = function (attrName) {
+    attrName = blankSplit(attrName);
+
+    this.each(function (index, el) {
+      each(attrName, function (idx, name) {
+
+      });
+    });
+  };
+
   InitSelector.prototype.css = function (cssName, cssValue) {
     if (cssValue == null && getType(cssName) !== 'object') {
       return getCSS(this.get(0), cssName);
@@ -335,6 +387,31 @@
     }
   }
 
+  InitSelector.prototype.data = function (name, value) {
+    name = 'data-' + camelCase(name);
+
+    if (value == null) {
+      return getRealValue(this.attr(name));
+    }
+
+    return this.attr(name, value);
+  };
+
+  InitSelector.prototype.addClass = function (className) {
+    return classApi(this, 'add', className);
+  };
+
+  InitSelector.prototype.removeClass = function (className) {
+    return classApi(this, 'remove', className);
+  };
+
+  InitSelector.prototype.toggleClass = function (className, mark) {
+    return classApi(this, 'toggle', className, mark || false);
+  };
+
+  /**
+   import
+  **/
   function $ (selector, context) {
     return new InitSelector(selector, context);
   }
@@ -359,5 +436,4 @@
   };
 
   win.$ = $;
-
 })(window, void 0);

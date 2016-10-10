@@ -372,7 +372,7 @@
 
     this.each(function (index, el) {
       each(attrName, function (idx, name) {
-
+        el.removeAttribute(name);
       });
     });
   };
@@ -409,8 +409,43 @@
     return classApi(this, 'toggle', className, mark || false);
   };
 
+  InitSelector.prototype.hasClass = function (className) {
+    return this.get(0).classList.contains(className);
+  };
+
+  InitSelector.prototype.position = function () {
+    var offset = this.offset();
+    var offsetParent = el.offsetParent();
+    var offsetParentOffset = $(offsetParent).offset();
+
+    return {
+      left: offset.left - offsetParentOffset.left,
+      top: offset.top - offsetParentOffset.top
+    };
+  };
+
+  InitSelector.prototype.offset = function () {
+    var el = this.get(0);
+    var ownerElement = (el.ownerElement || el).documentElement;
+    var clientTop = ownerElement.clientTop;
+    var clientLeft = ownerElement.clientLeft;
+    var scrollTop = window.pageXOffset || ownerElement.scrollTop;
+    var scrollLeft = window.pageYOffset || ownerElement.scrollLeft;
+    var boundingRect = el.getBoundingClientRect();
+
+    return {
+      left: boundingRect.left + scrollLeft - clientLeft,
+      top: boundingRect.top + scrollTop - clientTop,
+      right: boundingRect.right + scrollLeft - clientLeft,
+      bottom: boundingRect.bottom + scrollTop - clientTop,
+      width: boundingRect.width,
+      height: boundingRect.height
+    }
+  };
+
+
   /**
-   import
+   export
   **/
   function $ (selector, context) {
     return new InitSelector(selector, context);
